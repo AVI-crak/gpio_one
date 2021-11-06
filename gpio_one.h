@@ -11,16 +11,17 @@
  extern "C" {
 #endif /* _gpio_one_pin_ */
 
+#include <stdint.h>
 /// добавить свой мк
 #include "GPIO_ONE32F746BG.h"
-
-#pragma GCC push_options
-#pragma GCC optimize ("Os")
-
+void zap_gpio_one_pin (const uint32_t s_gpio);
 #define zap_char(v) #v
-#define zap_gpio_param(vs) (zap_gpio_nomer(zap_char(vs)))
 
-__attribute__( ( always_inline ) )   static inline uint32_t zap_gpio_nomer ( const char* vss )
+//#pragma GCC push_options
+//#pragma GCC optimize ("-Os")
+
+#if defined(__OPTIMIZE__)
+__attribute__ ((always_inline, pure))inline uint32_t zap_gpio_nomer ( char* vss )
 {
     uint16_t n = 0; uint32_t br = 0;
     if (vss[n] == "zap_gpio."[n]) n++;else return br;
@@ -133,71 +134,19 @@ __attribute__( ( always_inline ) )   static inline uint32_t zap_gpio_nomer ( con
     };
     return br;
 };
-
-typedef union
-{
- struct
-    {
-        uint32_t pin:4;
-        uint32_t af:4;
-        uint32_t mode:2;
-        uint32_t sped:2;
-        uint32_t pup:2;
-        uint32_t yper:1;
-        uint32_t lok:1;
-        uint32_t port:16;
-    };
- struct
-    {
-        uint32_t pin_afd:3;
-        uint32_t pin_afa:1;
-        uint32_t RESERVED1:28;
-    };
- uint32_t data_s;
-} zap_in_TypeDef;
-
-typedef struct
-{
-  __IO uint32_t MODER;    /*!< GPIO port mode register,               Address offset: 0x00      */
-  __IO uint32_t OTYPER;   /*!< GPIO port output type register,        Address offset: 0x04      */
-  __IO uint32_t OSPEEDR;  /*!< GPIO port output speed register,       Address offset: 0x08      */
-  __IO uint32_t PUPDR;    /*!< GPIO port pull-up/pull-down register,  Address offset: 0x0C      */
-  __IO uint32_t IDR;      /*!< GPIO port input data register,         Address offset: 0x10      */
-  __IO uint32_t ODR;      /*!< GPIO port output data register,        Address offset: 0x14      */
-  __IO uint32_t BSRR;     /*!< GPIO port bit set/reset register,      Address offset: 0x18      */
-  __IO uint32_t LCKR;     /*!< GPIO port configuration lock register, Address offset: 0x1C      */
-  __IO uint32_t AFR[2];   /*!< GPIO alternate function registers,     Address offset: 0x20-0x24 */
-} zap_GPIO_TypeDef;       /// alternate copy
+#else
+uint32_t zap_gpio_nomer ( char* vss );
+#endif
 
 
 
-static void zap_gpio_one_pin (const uint32_t s_gpio)
-{
-    zap_in_TypeDef init;
-    init.data_s = s_gpio;
-    zap_GPIO_TypeDef* GPIOx = (void*)0x40020000 + init.port;
+#define gpio_one_pin(zap_gpio_s)    zap_gpio_one_pin(zap_gpio_nomer(zap_char(zap_gpio_s)))
 
 
-    GPIOx->MODER = (GPIOx->MODER & (~(3 << (init.pin << 1)))) | (init.mode << (init.pin << 1));
-    GPIOx->PUPDR = (GPIOx->PUPDR & (~(3 << (init.pin << 1)))) | (init.pup << (init.pin << 1));
-    GPIOx->OSPEEDR = (GPIOx->OSPEEDR & (~(3 << (init.pin << 1)))) | (init.sped << (init.pin << 1));
-    if (init.yper)  GPIOx->OTYPER |= 1 << init.pin; else GPIOx->OTYPER &= ~(1 << init.pin);
-    if (init.mode == 2 )
-    {
-        GPIOx->AFR[init.pin_afa] = (GPIOx->AFR[init.pin_afa] &(~(15 << (init.pin_afd << 2)))) | (init.af << (init.pin_afd << 2));
-    };
-    if (init.lok)
-    {
-        GPIOx->LCKR = (1 << 16) | (1 << init.pin);
-        GPIOx->LCKR = 1 << init.pin;
-        GPIOx->LCKR = (1 << 16) | (1 << init.pin);
-    };
-};
 
-#define gpio_one_pin(zap_gpio_s)    zap_gpio_one_pin(zap_gpio_param(zap_gpio_s))
+//#pragma GCC pop_options
 
 
-#pragma GCC pop_options
 
 #ifdef _gpio_one_pin_
 }
